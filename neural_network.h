@@ -114,7 +114,6 @@ private:
     std::vector<double> forward(const std::vector<double> & vecInputData);
 
 private:
-
     NeuronLayer * m_hiddenLayer;
     NeuronLayer * m_outputLayer;
     int m_inputNumber;

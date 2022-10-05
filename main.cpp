@@ -26,7 +26,7 @@ int main(int argc, char * argv[] )
 
     std::vector<double> vecGroundTruth;
     vecGroundTruth.push_back(0.01);
-    vecGroundTruth.push_back(0.09);
+    vecGroundTruth.push_back(0.99);
 
     NeuralNetwork network(inputNumber, hiddenNumber, outputNubmer,
         vecHiddenLayerWeight, hiddenLayerBias, 
