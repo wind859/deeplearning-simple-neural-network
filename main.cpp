@@ -1,10 +1,11 @@
 #include "neural_network.h"
+#include <cstdio>
 
 int main(int argc, char * argv[] )
 {
     int inputNumber = 2;
     int hiddenNumber = 2;
-    int outputNubmer = 2;
+    int outputNumber = 2;
     
     std::vector<double> vecHiddenLayerWeight;
     vecHiddenLayerWeight.push_back(0.15);
@@ -28,7 +29,7 @@ int main(int argc, char * argv[] )
     vecGroundTruth.push_back(0.01);
     vecGroundTruth.push_back(0.99);
 
-    NeuralNetwork network(inputNumber, hiddenNumber, outputNubmer,
+    NeuralNetwork network(inputNumber, hiddenNumber, outputNumber,
         vecHiddenLayerWeight, hiddenLayerBias, 
         vecOutputLayerWeight, outputLayerBias);
 

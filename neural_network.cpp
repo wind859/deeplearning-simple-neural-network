@@ -1,6 +1,7 @@
 #include "neural_network.h"
 
-#include <math.h>
+#include <cmath>
+#include <cstdio>
 #include <random>
 #include <ctime>
 
@@ -71,7 +72,7 @@ void Neuron::appendWeight(double val)
 
 void Neuron::setWeight(double val, int idx)
 {
-    if( idx<0 || idx>=m_vecWeightData.size() )
+    if( idx<0 || idx>=(int)m_vecWeightData.size() )
     {
         return;
     }
@@ -166,7 +167,7 @@ std::vector<double> NeuronLayer::output()
 }
 
 // 神经元数目
-int NeuronLayer::neuronNumer()
+int NeuronLayer::neuronNumber()
 {
     return (int)m_vecNeurons.size();
 }
@@ -184,25 +185,31 @@ Neuron * NeuronLayer::neuron(int idx)
 ////////////////////////////////////////////////////////////////////////////////////
 // NeuralNetwork
 
-const double NeuralNetwork::s_learnRadio = 0.5;
+const double NeuralNetwork::s_learnRate = 0.5;
 
-NeuralNetwork::NeuralNetwork(int inputNumber, int hiddenNumber, int outputNubmer, 
+NeuralNetwork::NeuralNetwork(int inputNumber, int hiddenNumber, int outputNumber, 
         const std::vector<double> & vecHiddenLayerWeight, double hiddenLayerBias,
         const std::vector<double> & vecOutputLayerWeight, double outputLayerBias)
 {
     m_inputNumber = inputNumber;
 
     m_hiddenLayer = new NeuronLayer(hiddenNumber, hiddenLayerBias);
-    m_outputLayer = new NeuronLayer(outputNubmer, outputLayerBias);
+    m_outputLayer = new NeuronLayer(outputNumber, outputLayerBias);
 
     initWeightsFromInputs2HiddenLayerNeurons(vecHiddenLayerWeight);
     initWeightsFromHiddenLayerNeurons2OutputLayerNeurons(vecOutputLayerWeight);
 }
 
+NeuralNetwork::~NeuralNetwork()
+{
+    delete m_hiddenLayer;
+    delete m_outputLayer;
+}
+
 void NeuralNetwork::initWeightsFromInputs2HiddenLayerNeurons(const std::vector<double> & vecHiddenLayerWeight)
 {
     int weightIndex = 0;
-    for( int i=0; i<m_hiddenLayer->neuronNumer(); i++ )
+    for( int i=0; i<m_hiddenLayer->neuronNumber(); i++ )
     {
         Neuron * pNeuron = m_hiddenLayer->neuron(i);
         for(int j=0; j<m_inputNumber; j++ )
@@ -223,10 +230,10 @@ void NeuralNetwork::initWeightsFromInputs2HiddenLayerNeurons(const std::vector<d
 void NeuralNetwork::initWeightsFromHiddenLayerNeurons2OutputLayerNeurons(const std::vector<double> & vecOutputLayerWeight)
 {
     int weightIndex = 0;
-    for( int i=0; i<m_outputLayer->neuronNumer(); i++ )
+    for( int i=0; i<m_outputLayer->neuronNumber(); i++ )
     {
         Neuron * pNeuron = m_outputLayer->neuron(i);
-        for(int j=0; j<m_hiddenLayer->neuronNumer(); j++ )
+        for(int j=0; j<m_hiddenLayer->neuronNumber(); j++ )
         {
             if( vecOutputLayerWeight.empty() )
             {
@@ -262,51 +269,54 @@ void NeuralNetwork::train(const std::vector<double> & vecInputData, const std::v
 {
     forward(vecInputData);
 
-    // 1. 输出神经元的值
+    // 1. 计算输出层神经元的误差梯度
     std::vector<double> vecPDErrorOutput2TotalNetInput;
-    for( int idx=0; idx<m_outputLayer->neuronNumer(); idx++ )
+    for( int idx=0; idx<m_outputLayer->neuronNumber(); idx++ )
     {
         Neuron * pNeuron = m_outputLayer->neuron(idx);
         double dValue = pNeuron->calculatePDError2TotalNetInput(vecGroundTruth[idx]);
         vecPDErrorOutput2TotalNetInput.push_back(dValue);
     }
 
-    // 2. 隐含层神经元的值
+    // 2. 计算隐含层神经元的误差梯度
     std::vector<double> vecPDErrorHidden2TotalNetInput;
-    for( int idx=0; idx<m_hiddenLayer->neuronNumer(); idx++ )
+    for( int idx=0; idx<m_hiddenLayer->neuronNumber(); idx++ )
     {
-        Neuron * pNeuron = m_hiddenLayer->neuron(idx);
+        Neuron * pHiddenNeuron = m_hiddenLayer->neuron(idx);
         double dErrorHiddenNeuronOutput = 0;
-        for( int i=0; i<m_outputLayer->neuronNumer(); i++ )
+        // 累加所有输出层神经元对该隐含层神经元的误差贡献
+        for( int i=0; i<m_outputLayer->neuronNumber(); i++ )
         {
-            dErrorHiddenNeuronOutput += vecPDErrorOutput2TotalNetInput[i] * pNeuron->weight(idx);
+            // 使用输出层神经元连接到该隐含层神经元的权重
+            Neuron * pOutputNeuron = m_outputLayer->neuron(i);
+            dErrorHiddenNeuronOutput += vecPDErrorOutput2TotalNetInput[i] * pOutputNeuron->weight(idx);
         }
-        double dValue = dErrorHiddenNeuronOutput * pNeuron->calculatePDTotalNetInput2Input();
+        double dValue = dErrorHiddenNeuronOutput * pHiddenNeuron->calculatePDTotalNetInput2Input();
         vecPDErrorHidden2TotalNetInput.push_back(dValue);
     }
 
     // 3. 更新输出层权重系数
-    for( int i=0; i<m_outputLayer->neuronNumer(); i++ )
+    for( int i=0; i<m_outputLayer->neuronNumber(); i++ )
     {
         Neuron * pNeuron = m_outputLayer->neuron(i);
         for( int j=0; j<pNeuron->weightNumber(); j++ )
         {
             double dw = pNeuron->weight(j);
             double dPDError2Weight = vecPDErrorOutput2TotalNetInput[i] * pNeuron->calculatePDTotalNetInput2Weight(j);
-            double dnw = dw - dPDError2Weight * s_learnRadio;
+            double dnw = dw - dPDError2Weight * s_learnRate;
             pNeuron->setWeight(dnw, j);
         }
     }
 
     // 4. 更新隐含层的权重系数
-    for( int i=0; i<m_hiddenLayer->neuronNumer(); i++ )
+    for( int i=0; i<m_hiddenLayer->neuronNumber(); i++ )
     {
         Neuron * pNeuron = m_hiddenLayer->neuron(i);
         for( int j=0; j<pNeuron->weightNumber(); j++ )
         {
             double dw = pNeuron->weight(j);
             double dPDError2Weight = vecPDErrorHidden2TotalNetInput[i] * pNeuron->calculatePDTotalNetInput2Weight(j);
-            double dnw = dw - dPDError2Weight * s_learnRadio;
+            double dnw = dw - dPDError2Weight * s_learnRate;
             pNeuron->setWeight(dnw, j);
         }
     }

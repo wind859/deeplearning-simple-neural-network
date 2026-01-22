@@ -76,7 +76,7 @@ public:
     std::vector<double> output();
 
     // 神经元数目
-    int neuronNumer();
+    int neuronNumber();
 
     // 获取神经元
     Neuron * neuron(int idx);
@@ -92,11 +92,13 @@ private:
 class NeuralNetwork
 {
 public:
-    static const double s_learnRadio;
+    static const double s_learnRate;
 
-    NeuralNetwork(int inputNumber, int hiddenNumber, int outputNubmer, 
+    NeuralNetwork(int inputNumber, int hiddenNumber, int outputNumber, 
         const std::vector<double> & vecHiddenLayerWeight, double hiddenLayerBias, 
         const std::vector<double> & vecOutputLayerWeight, double outputLayerBias);
+    
+    ~NeuralNetwork();
 
     // 报告状态
     void inspect();
